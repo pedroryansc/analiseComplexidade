@@ -49,13 +49,18 @@ grafo = [vertices, arestas]
 
 resultado = existeCaminho(grafo, 10)
 
-print(resultado)
+# print(resultado)
 
 # Gráfico de crescimento no tempo de execução do algoritmo
 
 import random
 
-def gerarMatrizArestas(quantVertices):
+def gerarVertices(quantVertices):
+    vertices = [i for i in range(quantVertices)]
+
+    return vertices
+
+def gerarArestas(quantVertices):
     arestas = [[0 for _ in range(quantVertices)] for _ in range(quantVertices)]
 
     for i in range(quantVertices):
@@ -65,3 +70,14 @@ def gerarMatrizArestas(quantVertices):
                     arestas[i][j] = arestas[j][i] = 1
 
     return arestas
+
+quantVertices = 10000
+
+vertices = gerarVertices(quantVertices)
+arestas = gerarArestas(quantVertices)
+
+print(arestas)
+
+resultado = existeCaminho(grafo, 20)
+
+print(resultado)
