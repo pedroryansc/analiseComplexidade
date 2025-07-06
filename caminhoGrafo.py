@@ -20,8 +20,10 @@ def busca(grafo, verticeAtual, k, verticesVisitados):
 
     for vizinho in vertices: # O(n)
         if(arestas[verticeAtual][vizinho]): #O(1)
-            if(vizinho not in verticesVisitados): # O(1) <- A partir que os vizinhos são visitados, esse passo é executado cada vez menos. 
-                                                        # Contudo, essa diferença não é significativa no tempo de execução exponencial.
+            if(vizinho not in verticesVisitados): # O(1)
+                # A partir que os vizinhos são visitados, os passos a seguir são executados cada vez
+                # menos. Contudo, essa diferença não é significativa no tempo de execução exponencial.
+                
                 verticesVisitados.append(vizinho) # O(1)
                 
                 if(busca(grafo, vizinho, k, verticesVisitados)): # O(n^n)
@@ -35,19 +37,18 @@ def busca(grafo, verticeAtual, k, verticesVisitados):
 
 # Teste do algoritmo original
 
-vertices = [0, 1, 2, 3, 4, 5]
+vertices = [0, 1, 2]
 arestas = [
-    [0, 1, 0, 0, 1, 0],
-    [1, 0, 1, 0, 1, 0],
-    [0, 1, 0, 1, 0, 0],
-    [0, 0, 1, 0, 1, 1],
-    [1, 1, 0, 1, 0, 0],
-    [0, 0, 0, 1, 0, 0]
+    [0, 1, 1],
+    [1, 0, 0],
+    [1, 0, 0]
 ]
 
 grafo = [vertices, arestas]
 
-resultado_original = existeCaminho(grafo, 6)
+k = 3
+
+resultado_original = existeCaminho(grafo, k)
 
 print(f"Algoritmo original: {resultado_original}")
 
@@ -57,47 +58,54 @@ print(f"Algoritmo original: {resultado_original}")
 
 def existeCaminho_otimizado(grafo, k):
     vertices = grafo[0]
-    memoizacao = {} # Dicionário para memoização
+    memoizacao = {}
 
-    for verticeAtual in vertices:
-        if(busca_otimizada(grafo, verticeAtual, k, 1 << verticeAtual, memoizacao, 1)): # Começa com apenas o vértice atual como visitado
+    for verticeAtual in vertices: # O(n)
+        bitmaskVisitados = 1 << verticeAtual # Começa apenas com o vértice atual como visitado
+
+        if(busca_otimizada(grafo, verticeAtual, k, bitmaskVisitados, memoizacao, 1)): # O(2^n)
             return True
         
     return False
 
 def busca_otimizada(grafo, verticeAtual, k, bitmaskVisitados, memoizacao, contador):
     # Se a quantidade k de vértices foi visitada, o caminho existe
-    if(contador == k):
+    if(contador == k): # O(1)
         return True
     
-    # Se um "subproblema" já foi resolvido, o resultado salvo é retornado
-    if((verticeAtual, bitmaskVisitados) in memoizacao):
+    # Se um caminho já foi verificado, o resultado salvo é retornado
+    if((verticeAtual, bitmaskVisitados) in memoizacao): # O(1)
         return memoizacao[(verticeAtual, bitmaskVisitados)]
     
     vertices = grafo[0]
     arestas = grafo[1]
 
-    # Para cada vizinho do vértice atual
-    for vizinho in vertices:
-        if(arestas[verticeAtual][vizinho]): # Se há uma aresta entre o vértice atual para o outro
-            if not (bitmaskVisitados & (1 << vizinho)):
-                if(busca_otimizada(grafo, vizinho, k, bitmaskVisitados | (1 << vizinho), memoizacao, contador + 1)): # Se o vizinho ainda não foi visitado
-                    # O vizinho é visitado e é adicionado à máscara de bits
-                    memoizacao[(verticeAtual, bitmaskVisitados)] = True
+    for vizinho in vertices: # O(n), mas, graças à máscara de bits e à memoização,
+                                    # os passos a seguir são executados cada vez menos.
+        if(arestas[verticeAtual][vizinho]): # O(1)
+            if not (bitmaskVisitados & (1 << vizinho)): # Se o vizinho ainda não foi visitado
+                # O vizinho é marcado como visitado na máscara de bits
+                novaBitmaskVisitados = bitmaskVisitados | (1 << vizinho)
+
+                if(busca_otimizada(grafo, vizinho, k, novaBitmaskVisitados, memoizacao, contador + 1)): # O(2^n)
                     return True
                 
     memoizacao[(verticeAtual, bitmaskVisitados)] = False
     return False
 
+# Complexidade do algoritmo -> O(n * 2^n)
+
 # Teste do algoritmo otimizado
 
-resultado_otimizado = existeCaminho_otimizado(grafo, 6)
+resultado_otimizado = existeCaminho_otimizado(grafo, k)
 
 print(f"Algoritmo otimizado: {resultado_otimizado}")
 
-# Criação aleatória de vértices e arestas
+# ------------------------------------------------------
 
-import random, time
+# Gráficos
+
+import time, matplotlib.pyplot as plt
 
 def gerarVertices(quantVertices):
     vertices = [i for i in range(quantVertices)]
@@ -105,48 +113,63 @@ def gerarVertices(quantVertices):
     return vertices
 
 def gerarArestas(quantVertices):
-    arestas = [[0 for _ in range(quantVertices)] for _ in range(quantVertices)]
+    arestas = [[1 for _ in range(quantVertices)] for _ in range(quantVertices)]
 
     for i in range(quantVertices):
         for j in range(quantVertices):
-            if(i != j):
-                if(random.random() < 0.05):
-                    arestas[i][j] = arestas[j][i] = 1
+            if(i == j):
+                arestas[i][j] = arestas[j][i] = 0
 
     return arestas
 
-quantVertices = 10000
+def calcularTemposExecucao(intervaloVertices, algoritmo):
+    temposExecucao = []
+    
+    for quantVertices in intervaloVertices:
+        vertices = gerarVertices(quantVertices)
+        arestas = gerarArestas(quantVertices)
 
-vertices = gerarVertices(quantVertices)
-arestas = gerarArestas(quantVertices)
+        grafo = [vertices, arestas]
 
-# print(arestas)
+        k = quantVertices + 1
 
-grafo = [vertices, arestas]
+        if(algoritmo == 1):
+            inicio = time.time()
+            existeCaminho(grafo, k)
+            fim = time.time()
+        else:
+            inicio = time.time()
+            existeCaminho_otimizado(grafo, k)
+            fim = time.time()
 
-inicio = time.time()
+        tempo = fim - inicio
 
-print(inicio)
+        temposExecucao.append(tempo)
 
-resultado_original = existeCaminho(grafo, 900)
-fim = time.time()
+    return temposExecucao
 
-print(fim)
+def gerarGrafico(intervaloVertices, tempos, titulo):
+    plt.plot(intervaloVertices, tempos)
 
-tempo_original = fim - inicio
+    plt.title(titulo)
+    plt.xlabel("Quantidade de vértices")
+    plt.ylabel("Tempo de execução (s)")
 
-inicio = time.time()
+    plt.show()
 
-print(inicio)
+intervalo_original = [i for i in range(2, 12)]
+intervalo_otimizado = [i for i in range(2, 22)]
 
-resultado_otimizado = existeCaminho_otimizado(grafo, 900)
-fim = time.time()
+tempo_original = calcularTemposExecucao(intervalo_original, 1)
+print(f"Tempos de execução do algoritmo original: {tempo_original}")
 
-print(fim)
+tempo_otimizado = calcularTemposExecucao(intervalo_otimizado, 2)
+print(f"Tempos de execução do algoritmo otimizado: {tempo_otimizado}")
 
-tempo_otimizado = fim - inicio
+# Gráfico do desempenho do algoritmo original
 
-print(f"Algoritmo original (com grafo aleatório): {resultado_original} - Tempo: {tempo_original}")
-print(f"Algoritmo otimizado (com grafo aleatório): {resultado_otimizado} - Tempo: {tempo_otimizado}")
+gerarGrafico(intervalo_original, tempo_original, "Desempenho do algoritmo original")
 
-# Gráfico de crescimento no tempo de execução dos algoritmos
+# Gráfico do desempenho do algoritmo otimizado
+
+gerarGrafico(intervalo_otimizado, tempo_otimizado, "Desempenho do algoritmo otimizado")
